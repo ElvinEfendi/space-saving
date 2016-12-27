@@ -13,11 +13,11 @@ function _M.new(dict_name, window, phi, epsilon, max_counters_size)
   end
   local window = window or 5 * 60
   -- this defines what should be considered frequent
-  -- an element i is considered frequent if f(i) >= phi*number_of_hits
+  -- an element i is considered frequent if f(i) >= phi*hits
   local phi = phi or 0.001
-  -- this is the error rate we allow, i.e f^(i) >= (phi-epsilon)*number_of_hits
+  -- this is the error rate we allow, i.e f^(i) >= (phi-epsilon)*hits
   local epsilon = epsilon or 0.001
-  -- according to the paper 1/epsilon is the safest value to guarantee f_i > epsilon*number_of_hits
+  -- according to the paper 1/epsilon is the safest value to guarantee f_i > epsilon*hits
   local max_counters_size = max_counters_size or 1/epsilon
 
   return setmetatable({ dict = dict, phi = phi, window = window, epsilon = epsilon, max_counters_size = max_counters_size }, _M)

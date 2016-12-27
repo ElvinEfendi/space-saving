@@ -29,7 +29,7 @@ local function calculate_min_and_size(counters)
   local counters_size = 0
   for key, stats in pairs(counters) do
     counters_size = counters_size + 1
-    if stats.counters < min_count then
+    if stats.count < min_count then
       min_count = stats.count
       min_count_index = key
     end
@@ -37,19 +37,18 @@ local function calculate_min_and_size(counters)
   return min_count, min_count_key, counters_size
 end
 
-local function get_or_init_counters(self)
-  local counters_json
+local function incr_hits_and_init_counters(self)
   local hits, err = self.dict:incr("hits", 1)
-  if hits then
-    counters_json = self.dict:get("counters")
-  elseif err ~= "not found" then
+  if not hits and err ~= "not found" then
     return nil, err
-  else
-    counters_json = "{}"
-    self.dict:set("counters", counters_json, self.window)
+  elseif not hits then
+    self.dict:set("counters", "{}", self.window)
     self.dict:add("hits", 1, self.window)
   end
+end
 
+local function get_counters(self)
+  local counters_json = self.dict:get("counters")
   local ok, counters = pcall(json.decode, counters_json)
   if not ok then
     return nil, string.format("Could not decode counters, error: %s", counters)
@@ -69,8 +68,17 @@ local function update_counters(self, counters)
   return nil
 end
 
+local function support(self)
+  local hits, err = self.dict:get("hits")
+  if not hits then
+    return nil, string.format("Could not get hits: %s", err)
+  end
+  return self.phi * hits, nil
+end
+
 function _M:process(key)
-  local counters, err = get_or_init_counters(self)
+  incr_hits_and_init_counters(self)
+  local counters, err = get_counters(self)
   if err then
     return err
   end
@@ -90,10 +98,38 @@ function _M:process(key)
   return update_counters(self, counters)
 end
 
-function _M:report(key)
-  local counters = self.dict:get("counters") or ""
-  local hits = self.dict:get("hits") or 0
-  return counters .. " <br/>hits: " .. hits
+function _M:frequent_keys()
+  local counters, err = get_counters(self)
+  if err then
+    return nil, nil, err
+  end
+  local support, err = support(self)
+  if err then
+    return nil, nil, err
+  end
+  local frequent_keys = {}
+  local guaranteed = true
+  for key, stats in pairs(counters) do
+    if stats.count > support then
+      frequent_keys[key] = stats
+      if stats.count - stats.overestimation < support then
+        guaranteed = false
+      end
+    end
+  end
+  return frequent_keys, guaranteed, nil
+end
+
+function _M:stats(key)
+  local counters, err = get_counters(self)
+  if err then
+    return nil, err
+  end
+  local support, err = support(self)
+  if err then
+    return nil, err
+  end
+  return counters[key], nil
 end
 
 return _M

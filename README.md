@@ -34,3 +34,7 @@ http {
 ## References
  1. Efficient computation of frequent and top-k elements in data streams by Ahmed Metwally et al.
  2. Finding Frequent Items in Data Streams by Graham Cormode et al.
+
+## TODO
+ - [ ] Add more tests
+ - [ ] Add benchmark

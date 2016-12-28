@@ -17,7 +17,7 @@ function _M.new(dict_name, window, phi, epsilon, max_counters_size)
   local phi = phi or 0.001
   -- this is the error rate we allow, i.e f^(i) >= (phi-epsilon)*hits
   local epsilon = epsilon or 0.001
-  -- according to the paper 1/epsilon is the safest value to guarantee f_i > epsilon*hits
+  -- when the stream distribution is ignored O(1/epsilon) is the uper bound for the number of counters needed
   local max_counters_size = max_counters_size or 1/epsilon
 
   return setmetatable({ dict = dict, phi = phi, window = window, epsilon = epsilon, max_counters_size = max_counters_size }, _M)

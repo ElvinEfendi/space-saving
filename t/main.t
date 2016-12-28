@@ -1,8 +1,14 @@
 use Test::Nginx::Socket::Lua 'no_plan';
+use Cwd qw(cwd);
 
-
+my $pwd = cwd();
+my $cpath = "$pwd/vendor/_linux/?.so";
+if ($^O eq "darwin") {
+  $cpath = "$pwd/vendor/_osx/?.so";
+}
 our $HttpConfig = <<"_EOC_";
-  lua_package_path '/vagrant/work/space_saving/lib/?.lua;;';
+  lua_package_cpath "$cpath";
+  lua_package_path "$pwd/lib/?.lua;;";
   lua_shared_dict space_saving_dict 10m;
 _EOC_
 

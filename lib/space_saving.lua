@@ -82,7 +82,7 @@ function _M:process(key)
     return "key can not be nil"
   end
   local lock = resty_lock:new("locks_dict")
-  local elapsed, err = lock:lock(key)
+  local elapsed, err = lock:lock("update_lock")
   if not elapsed then
     return "failed to acquire the lock: " .. tostring(err)
   end

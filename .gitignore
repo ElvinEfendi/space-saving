@@ -1,2 +1,4 @@
 go
 t/servroot/
+nginx.conf
+experiments/

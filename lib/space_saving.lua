@@ -77,6 +77,9 @@ local function support(self)
 end
 
 function _M:process(key)
+  if not key then
+    return "key can not be nil"
+  end
   incr_hits_and_init_counters(self)
   local counters, err = get_counters(self)
   if err then

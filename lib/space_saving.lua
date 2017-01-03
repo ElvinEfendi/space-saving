@@ -1,5 +1,6 @@
 local json = require("cjson")
 local resty_lock = require("resty.lock")
+local stream_summary = require("stream_summary")
 
 local _M = {}
 _M.version = "0.0.1"
@@ -20,22 +21,8 @@ function _M.new(dict_name, window, phi, epsilon, max_counters_size)
   local epsilon = epsilon or 0.001
   -- when the stream distribution is ignored O(1/epsilon) is the uper bound for the number of counters needed
   local max_counters_size = max_counters_size or 1/epsilon
-
-  return setmetatable({ dict = dict, phi = phi, window = window, epsilon = epsilon, max_counters_size = max_counters_size }, _M)
-end
-
-local function calculate_min_and_size(counters)
-  local min_count = math.huge
-  local min_count_key
-  local counters_size = 0
-  for key, stats in pairs(counters) do
-    counters_size = counters_size + 1
-    if stats.count < min_count then
-      min_count = stats.count
-      min_count_index = key
-    end
-  end
-  return min_count, min_count_key, counters_size
+  local ss = stream_summary.new(dict, max_counters_size)
+  return setmetatable({ dict = dict, phi = phi, window = window, ss = ss }, _M)
 end
 
 local function incr_hits_and_init_counters(self)
@@ -48,27 +35,6 @@ local function incr_hits_and_init_counters(self)
   end
 end
 
-local function get_counters(self)
-  local counters_json = self.dict:get("counters")
-  local ok, counters = pcall(json.decode, counters_json)
-  if not ok then
-    return nil, string.format("Could not decode counters, error: %s", counters)
-  end
-  return counters, nil
-end
-
-local function update_counters(self, counters)
-  local ok, counters_json = pcall(json.encode, counters)
-  if not ok then
-    return string.format("Could not encode counters, error: %s", counters_json)
-  end
-  local ok, err = self.dict:replace("counters", counters_json)
-  if not ok then
-    return err
-  end
-  return nil
-end
-
 local function support(self)
   local hits, err = self.dict:get("hits")
   if not hits then
@@ -77,9 +43,9 @@ local function support(self)
   return self.phi * hits, nil
 end
 
-function _M:process(key)
-  if not key then
-    return "key can not be nil"
+function _M:process(item)
+  if not item then
+    return "item can not be nil"
   end
   local lock = resty_lock:new("locks_dict")
   local elapsed, err = lock:lock("update_lock")
@@ -112,7 +78,14 @@ function _M:process(key)
   if not ok then
     return "failed to unlock: " .. tostring(err)
   end
-  return nil
+  local item = tostring(item)
+  local value, err = self.ss.incr(item)
+  if value then
+    return nil
+  else if err ~= "not found" then
+    return err
+  end
+  return self.ss.start_monitoring(tem)
 end
 
 function _M:frequent_keys()

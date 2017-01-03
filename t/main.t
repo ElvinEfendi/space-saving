@@ -8,8 +8,9 @@ if ($^O eq "darwin") {
 }
 our $HttpConfig = <<"_EOC_";
   lua_package_cpath "$cpath";
-  lua_package_path "$pwd/lib/?.lua;;";
+  lua_package_path "$pwd/lib/?.lua;$pwd/../lua-resty-lock/lib/?.lua;;";
   lua_shared_dict space_saving_dict 10m;
+  lua_shared_dict locks_dict 100k;
 _EOC_
 
 no_long_string();

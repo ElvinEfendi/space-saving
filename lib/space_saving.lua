@@ -1,4 +1,5 @@
 local json = require("cjson")
+local resty_lock = require("resty.lock")
 
 local _M = {}
 _M.version = "0.0.1"
@@ -80,6 +81,11 @@ function _M:process(key)
   if not key then
     return "key can not be nil"
   end
+  local lock = resty_lock:new("locks_dict")
+  local elapsed, err = lock:lock("update_lock")
+  if not elapsed then
+    return "failed to acquire the lock: " .. tostring(err)
+  end
   incr_hits_and_init_counters(self)
   local counters, err = get_counters(self)
   if err then
@@ -98,7 +104,15 @@ function _M:process(key)
     end
     counters[key] = stats
   end
-  return update_counters(self, counters)
+  local err = update_counters(self, counters)
+  if err then
+    return "could not update counters: " .. tostring(err)
+  end
+  local ok, err = lock:unlock()
+  if not ok then
+    return "failed to unlock: " .. tostring(err)
+  end
+  return nil
 end
 
 function _M:frequent_keys()

@@ -1,5 +1,5 @@
 # Space Saving
-Space Saving is an efficient counter based algorithm to find all frequent and top-k frequent items in a stream. This is the implementation of it as an Nginx Lua module to discover frequent items in a given stream. The implementation uses time based sliding window to focus on an interval of time rather than the whole history. Space Saving is deterministic but it solves a relaxed version of the original frequent items discovery problem. That being said, it can report if its output is guaranteed to be sound. It should also be noted that this module does not implement the Stream-Summary data structure described in the original paper([1]).
+Space Saving is an efficient counter based algorithm to find all frequent and top-k frequent items in a stream. This is the implementation of it as an Nginx Lua module to discover frequent items in a given stream. The implementation uses time based sliding window to focus on an interval of time rather than the whole history. Space Saving is deterministic but it solves a relaxed version of the original frequent items discovery problem. That being said, it can report if its output is guaranteed to be sound. It should also be noted that this module does not implement the Stream-Summary data structure described in the original paper([1]), that means complexity of processing of an item will be linear with the number of counters.
 
 
 ## Usage
@@ -14,8 +14,7 @@ http {
     location / {
       access_by_lua '
         local space_saving = require("space_saving")
-        -- track frequent API clients in 15 minutes windows
-        local ss = space_saving.new("space_saving_dict", 15 * 60)
+        local ss = space_saving.new()
         local api_client_id = ngx.var.arg_api_client_id
         ss:process(api_client_id)
 
@@ -38,3 +37,4 @@ http {
 ## TODO
  - [ ] Add more tests
  - [ ] Add benchmark
+ - [ ] Implement Stream-Summary data structure

@@ -26,65 +26,65 @@ end
 
 local function calculate_min_and_size(counters)
   local min_count = math.huge
-  local min_count_key
+  local min_count_item
   local counters_size = 0
-  for key, stats in pairs(counters) do
+  for item, stats in pairs(counters) do
     counters_size = counters_size + 1
     if stats.count < min_count then
       min_count = stats.count
-      min_count_index = key
+      min_count_item = item
     end
   end
-  return min_count, min_count_key, counters_size
+  return min_count, min_count_item, counters_size
 end
 
 local function get_support(self)
   return self.phi * self.hits
 end
 
-function _M:process(key)
-  if not key then
-    return "key can not be nil"
+function _M:process(item)
+  if not item then
+    return "item can not be nil"
   end
 
   self.hits = self.hits + 1
 
-  local stats = self.counters[key]
+  local stats = self.counters[item]
   if stats then
     stats.count = stats.count + 1
   else
-    local min_count, min_count_key, counters_size = calculate_min_and_size(counters)
+    local min_count, min_count_item, counters_size = calculate_min_and_size(counters)
     if counters_size < self.max_counters_size then
-      -- add a new counter for the key since there's still a room
+      -- add a new counter for the item since there's still a room
       stats = { count = 1, overestimation = 0 }
     else
-      counters[min_count_key] = nil -- deletes the key with minimum hits
+      counters[min_count_item] = nil -- deletes the item with minimum hits
       stats = { count = min_count + 1, overestimation = min_count }
     end
-    counters[key] = stats
+    counters[item] = stats
   end
   self.counters = counters
 
   return nil
 end
 
-function _M:frequent_keys()
+function _M:frequent_items()
   local support = get_support(self)
-  local frequent_keys = {}
+  local frequent_items = {}
   local guaranteed = true
-  for key, stats in pairs(counters) do
+  for item, stats in pairs(counters) do
     if stats.count > support then
-      frequent_keys[key] = stats
+      frequent_items[item] = stats
       if stats.count - stats.overestimation < support then
         guaranteed = false
       end
     end
   end
-  return frequent_keys, guaranteed, nil
+  return frequent_items, guaranteed, nil
 end
 
-function _M:stats(key)
-  return self.counters[key]
+function _M:stats(item)
+  return self.counters[item]
 end
 
 return _M
